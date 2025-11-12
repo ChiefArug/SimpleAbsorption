@@ -3,18 +3,12 @@ package knightminer.simpleabsorption;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
-import net.minecraftforge.common.util.NonNullConsumer;
-import net.minecraftforge.event.AttachCapabilitiesEvent;
-import net.minecraftforge.event.TickEvent.Phase;
-import net.minecraftforge.event.TickEvent.PlayerTickEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.LogicalSide;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.LogicalSide;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 /** Capability handling absorption NBT storage */
 public class AbsorptionCapability {
@@ -29,8 +23,8 @@ public class AbsorptionCapability {
 	/** Registers the event handlers and the capability */
 	public static void init(IEventBus modBus) {
 		modBus.addListener(AbsorptionCapability::registerCapability);
-		MinecraftForge.EVENT_BUS.addGenericListener(Entity.class, AbsorptionCapability::attachCapability);
-		MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, PlayerTickEvent.class, AbsorptionCapability::playerTick);
+		NeoForge.EVENT_BUS.addGenericListener(Entity.class, AbsorptionCapability::attachCapability);
+        NeoForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, PlayerTickEvent.class, AbsorptionCapability::playerTick);
 	}
 
 	/** Event listener to register the capability */

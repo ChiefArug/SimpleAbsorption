@@ -1,16 +1,16 @@
 plugins {
   // Apply the plugin. You can find the latest version at https://projects.neoforged.net/neoforged/ModDevGradle
-  id 'net.neoforged.moddev.legacyforge' version '2.0.112'
+  id 'net.neoforged.moddev' version '2.0.112'
   id 'idea'
 }
 
 group = "knightminer"
 archivesBaseName = "SimpleAbsorption"
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 version = "${minecraft_version}-${mod_version}"
 
-legacyForge {
-  version = "${minecraft_version}-${forge_version}"
+neoForge {
+  version = "${neoforge_version}"
 
   // Validate AT files and raise errors when they have invalid targets
   validateAccessTransformers = true
@@ -18,27 +18,27 @@ legacyForge {
   runs {
     client {
       // Recommended logging data for a userdev environment
-      systemProperty 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+      systemProperty 'neoforge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
       // Recommended logging level for the console
-      systemProperty 'forge.logging.console.level', 'debug'
+      systemProperty 'neoforge.logging.console.level', 'debug'
 
       client()
     }
 
     server {
       // Recommended logging data for a userdev environment
-      systemProperty 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+      systemProperty 'neoforge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
       // Recommended logging level for the console
-      systemProperty 'forge.logging.console.level', 'debug'
+      systemProperty 'neoforge.logging.console.level', 'debug'
 
       server()
     }
 
     data {
       // Recommended logging data for a userdev environment
-      systemProperty 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+      systemProperty 'neoforge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
       // Recommended logging level for the console
-      systemProperty 'forge.logging.console.level', 'debug'
+      systemProperty 'neoforge.logging.console.level', 'debug'
 
       programArguments.addAll '--mod', 'simple_absorption', '--all', '--output', 'src/generated/resources/'
 
@@ -62,9 +62,9 @@ repositories {
 
 dependencies {
   // compile against the JEI API but do not include it at runtime
-  modCompileOnly "mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"
+  compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
   // at runtime, use the full JEI jar
-  modRuntimeOnly "mezz.jei:jei-${minecraft_version}-forge:${jei_version}"
+  runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -74,7 +74,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
           mod_id            : mod_id,
           version           : version,
           minecraft_range   : minecraft_range,
-          forge_range       : forge_range,
+          neoforge_range       : neoforge_range,
           loader_range      : loader_range
   ]
   inputs.properties replaceProperties
@@ -87,7 +87,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 // this works with both building through Gradle and the IDE.
 sourceSets.main.resources.srcDir generateModMetadata
 // To avoid having to run "generateModMetadata" manually, make it run on every project reload
-legacyForge.ideSyncTask generateModMetadata
+neoForge.ideSyncTask generateModMetadata
 
 
 java {

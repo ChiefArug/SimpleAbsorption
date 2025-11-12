@@ -14,9 +14,9 @@ description='''
 Mod adding a simple absorption shield for the player, restored when the hunger bar is full.
 '''
 [[dependencies."${mod_id}"]]
-    modId="forge"
+    modId="neoforge"
     mandatory=true
-    versionRange="${forge_range}" #mandatory
+    versionRange="${neoforge_range}" #mandatory
     ordering="AFTER"
     side="BOTH"
 [[dependencies."${mod_id}"]]

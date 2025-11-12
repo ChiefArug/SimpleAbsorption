@@ -3,6 +3,8 @@ package knightminer.simpleabsorption;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -16,36 +18,30 @@ import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.ItemAttributeModifierEvent;
-import net.minecraftforge.event.entity.living.MobEffectEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 
-import java.util.EnumMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import static knightminer.simpleabsorption.SimpleAbsorption.MOD_ID;
+import static knightminer.simpleabsorption.SimpleAbsorption.MOD_RL;
+import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.*;
+
 /** Logic adding absorption from all relevant sources */
 public class AbsorptionSources {
-	/** Generates a UUID map for all slot types from a string key */
-	private static Map<EquipmentSlot,UUID> makeUUIDMap(String key) {
-		Map<EquipmentSlot,UUID> map = new EnumMap<>(EquipmentSlot.class);
-		for (EquipmentSlot type : EquipmentSlot.values()) {
-			map.put(type, UUID.nameUUIDFromBytes((key + type.getName()).getBytes()));
-		}
-		return map;
-	}
 
 	/** UUID for potions */
 	private static final UUID POTION_UUID = UUID.fromString("e7c88f6c-4d46-11eb-ae93-0242ac130002");
 
 	/** Map of slot to UUID to ensure consistent removals */
-	private static final Map<EquipmentSlot,UUID> ARMOR_ADD_UUID = makeUUIDMap(SimpleAbsorption.MOD_ID + "_armor_add");
-	private static final Map<EquipmentSlot,UUID> ARMOR_MULTIPLY_TOTAL_UUID = makeUUIDMap(SimpleAbsorption.MOD_ID + "_armor_multiply_total");
-	private static final Map<EquipmentSlot,UUID> ARMOR_MULTIPLY_BASE_UUID = makeUUIDMap(SimpleAbsorption.MOD_ID + "_armor_multiply_base");
-	private static final Map<EquipmentSlot,UUID> EFFICIENCY_ADD_UUID = makeUUIDMap(SimpleAbsorption.MOD_ID + "_regen_add");
-	private static final Map<EquipmentSlot,UUID> EFFICIENCY_MULTIPLY_TOTAL_UUID = makeUUIDMap(SimpleAbsorption.MOD_ID + "_efficiency_multiply_total");
-	private static final Map<EquipmentSlot,UUID> EFFICIENCY_MULTIPLY_BASE_UUID = makeUUIDMap(SimpleAbsorption.MOD_ID + "_efficiency_multiply_base");
+	private static final ResourceLocation ARMOR_ADD_UUID = MOD_RL.withPath("armor_add");
+	private static final ResourceLocation ARMOR_MULTIPLY_TOTAL_UUID = MOD_RL.withPath("armor_multiply_total");
+	private static final ResourceLocation ARMOR_MULTIPLY_BASE_UUID = MOD_RL.withPath("armor_multiply_base");
+	private static final ResourceLocation EFFICIENCY_ADD_UUID = MOD_RL.withPath("regen_add");
+	private static final ResourceLocation EFFICIENCY_MULTIPLY_TOTAL_UUID = MOD_RL.withPath("efficiency_multiply_total");
+	private static final ResourceLocation EFFICIENCY_MULTIPLY_BASE_UUID = MOD_RL.withPath("efficiency_multiply_base");
 
 	/** Cached object for removing the potion attribute */
 	private static final Supplier<Multimap<Attribute, AttributeModifier>> POTION_REMOVAL = Suppliers.memoize(() -> ImmutableMultimap.of(SimpleAbsorption.ABSORPTION_MAX.get(), new AttributeModifier(POTION_UUID, "simple_absorption_potion", 0,Operation.ADDITION)));
@@ -62,26 +58,26 @@ public class AbsorptionSources {
 	 * @param totalUUID    UUID for the multiply total modifier
 	 * @return  Additive value for attribute
 	 */
-	private static float replaceAttribute(ItemAttributeModifierEvent event, Attribute original, Attribute replacement, String name, UUID baseUUID, UUID totalUUID) {
+	private static float replaceAttribute(ItemAttributeModifierEvent event, Attribute original, Attribute replacement, String name) {
 		float additiveBoost = 0;
 		float multiplyBase = 0;
 		float multiplyTotal = 1;
-		for (AttributeModifier modifier : event.removeAttribute(original)) {
-			switch (modifier.getOperation()) {
-				case ADDITION -> additiveBoost += modifier.getAmount();
-				case MULTIPLY_BASE -> multiplyBase += modifier.getAmount();
-				case MULTIPLY_TOTAL ->
+		for (AttributeModifier modifier : event.removeModifier(Holder.direct(original), )) {
+			switch (modifier.operation()) {
+				case ADD_VALUE -> additiveBoost += modifier.amount();
+				case ADD_MULTIPLIED_BASE -> multiplyBase += modifier.amount();
+				case ADD_MULTIPLIED_TOTAL ->
 						// operation is (1 + x1) * (1 + x2) * ..., so add the 1 before multiplying for the total
-						multiplyTotal *= (1 + modifier.getAmount());
+						multiplyTotal *= (1 + modifier.amount());
 			}
 		}
 		// add in armor unique modifiers
 		if (multiplyBase != 0) {
-			event.addModifier(replacement, new AttributeModifier(baseUUID, name + "_multiply_base", multiplyBase, Operation.MULTIPLY_BASE));
+			event.addModifier(replacement, new AttributeModifier(MOD_RL.withPath( "multiply_base"), multiplyBase, ADD_MULTIPLIED_BASE));
 		}
 		// add in armor unique modifiers
 		if (multiplyTotal != 1) {
-			event.addModifier(replacement, new AttributeModifier(totalUUID, name + "_multiply_total", multiplyTotal - 1, Operation.MULTIPLY_TOTAL));
+			event.addModifier(replacement, new AttributeModifier( name + "_multiply_total", multiplyTotal - 1, ADD_MULTIPLIED_TOTAL));
 		}
 
 		return additiveBoost;
@@ -94,7 +90,7 @@ public class AbsorptionSources {
 		float max = 0;
 		float efficiency = 0;
 		ItemStack stack = event.getItemStack();
-		EquipmentSlot slot = event.getSlotType();
+		EquipmentSlot slot = event.slot();
 		if (slot == Mob.getEquipmentSlotForItem(stack)) {
 			// boost from enchant
 			max += stack.getEnchantmentLevel(SimpleAbsorption.ABSORPTION.get());
@@ -119,7 +115,7 @@ public class AbsorptionSources {
 		if (Config.REPLACE_ARMOR.get()) {
 			// armor -> absorption max
 			max += replaceAttribute(event, Attributes.ARMOR, SimpleAbsorption.ABSORPTION_MAX.get(), "simple_absorption_max",
-															ARMOR_MULTIPLY_BASE_UUID.get(slot), ARMOR_MULTIPLY_TOTAL_UUID.get(slot));
+															ARMOR_MULTIPLY_BASE_UUID, ARMOR_MULTIPLY_TOTAL_UUID.get(slot));
 			// toughness -> absorption efficiency
 			efficiency += replaceAttribute(event, Attributes.ARMOR_TOUGHNESS, SimpleAbsorption.ABSORPTION_EFFICIENCY.get(), "simple_absorption_efficiency",
 																		 EFFICIENCY_MULTIPLY_BASE_UUID.get(slot), EFFICIENCY_MULTIPLY_TOTAL_UUID.get(slot));

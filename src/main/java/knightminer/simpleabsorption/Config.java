@@ -1,16 +1,16 @@
 package knightminer.simpleabsorption;
 
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
-import net.minecraftforge.common.ForgeConfigSpec.DoubleValue;
-import net.minecraftforge.common.ForgeConfigSpec.IntValue;
+
+import net.neoforged.neoforge.common.ModConfigSpec;
+
+import static net.neoforged.neoforge.common.ModConfigSpec.*;
 
 @SuppressWarnings("WeakerAccess")
 public class Config {
-  static final ForgeConfigSpec SPEC;
+  static final ModConfigSpec SPEC;
 
   static {
-    ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+    Builder builder = new Builder();
 
     BASE_ABSORPTION = builder
         .comment("Base absorption amount to give to players in half hearts, replenishes like regular health. If 0, players will start with no absorption.")
